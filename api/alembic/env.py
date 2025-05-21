@@ -1,6 +1,12 @@
 import os
+import sys
 from sqlalchemy import create_engine
 from alembic import context
+
+# Add the parent directory to sys.path to make 'app' importable
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Now we can import the Base
 from app.models.base import Base
 
 # Get database URL from environment variable
