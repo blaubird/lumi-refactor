@@ -1,4 +1,5 @@
 import os
+import sys
 import psycopg2
 from alembic.config import Config
 from alembic import command
@@ -8,6 +9,9 @@ def setup_database():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is not set")
+    
+    # Add the parent directory to sys.path to make 'app' importable
+    sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
     
     # Connect to the database
     conn = psycopg2.connect(database_url)
