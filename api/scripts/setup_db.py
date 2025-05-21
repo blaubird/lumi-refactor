@@ -1,0 +1,29 @@
+import os
+import psycopg2
+from alembic.config import Config
+from alembic import command
+
+def setup_database():
+    """Set up the database before running the application"""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is not set")
+    
+    # Connect to the database
+    conn = psycopg2.connect(database_url)
+    conn.autocommit = True
+    cursor = conn.cursor()
+    
+    # Activate pgvector
+    cursor.execute('CREATE EXTENSION IF NOT EXISTS vector;')
+    
+    # Close the connection
+    cursor.close()
+    conn.close()
+    
+    # Apply migrations
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+    
+if __name__ == "__main__":
+    setup_database()
