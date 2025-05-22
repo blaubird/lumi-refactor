@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 import os
+import sys
 import psycopg2
 from alembic.config import Config
 from alembic import command
-from app.core.logging import logger
+import logging
+
+# Add parent directory to sys.path to make 'app' importable
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+# Configure basic logging since we can't import app.core.logging yet
+logging.basicConfig(
+    format="%(levelname)s [%(name)s] [%(module)s:%(lineno)d] %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 def setup_database():
     """Set up database before application startup"""
