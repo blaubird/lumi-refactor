@@ -1,18 +1,18 @@
 import os
-import logging
+import logging as logging_module
 
 # Configure logging
-logging = logging.getLogger(__name__)
+logger = logging_module.getLogger(__name__)
 
 # Create formatter
-formatter = logging.Formatter(
+formatter = logging_module.Formatter(
     "%(levelname)s [%(name)s] [%(module)s:%(lineno)d] %(message)s"
 )
 
 # Create console handler
-console_handler = logging.StreamHandler()
+console_handler = logging_module.StreamHandler()
 console_handler.setFormatter(formatter)
 
 # Add handler to logger
-logging.addHandler(console_handler)
-logging.setLevel(logging.INFO)
+logger.addHandler(console_handler)
+logger.setLevel(logging_module.INFO)
