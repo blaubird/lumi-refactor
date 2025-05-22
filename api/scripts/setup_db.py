@@ -21,6 +21,13 @@ def setup_database():
     # Activate pgvector
     cursor.execute('CREATE EXTENSION IF NOT EXISTS vector;')
     
+    # Reset alembic_version table to fix migration history mismatch
+    try:
+        cursor.execute('DROP TABLE IF EXISTS alembic_version;')
+        print("Dropped alembic_version table to reset migration history")
+    except Exception as e:
+        print(f"Error dropping alembic_version table: {e}")
+    
     # Close the connection
     cursor.close()
     conn.close()
