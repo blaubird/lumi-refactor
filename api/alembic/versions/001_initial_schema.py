@@ -1,9 +1,7 @@
 """Initial schema migration
-
 Revision ID: 001_initial_schema
 Revises: 
 Create Date: 2025-05-21 13:58:00.000000
-
 """
 from alembic import op
 import sqlalchemy as sa
@@ -15,13 +13,22 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
-
 def upgrade():
     # Create extension for pgvector
     op.execute('CREATE EXTENSION IF NOT EXISTS vector;')
     
-    # Create role_enum type
-    op.execute("CREATE TYPE role_enum AS ENUM ('user', 'assistant', 'system');")
+    # Create role_enum type with idempotent approach
+    op.execute("""
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_enum') THEN
+            CREATE TYPE role_enum AS ENUM ('user', 'assistant', 'system');
+        END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN NULL;
+    END
+    $$;
+    """)
     
     # Create tenants table
     op.create_table(
@@ -64,12 +71,19 @@ def upgrade():
     )
     op.create_index(op.f('ix_faqs_tenant_id'), 'faqs', ['tenant_id'], unique=False)
 
-
 def downgrade():
     # Drop tables in reverse order
     op.drop_table('faqs')
     op.drop_table('messages')
     op.drop_table('tenants')
     
-    # Drop enum type
-    op.execute("DROP TYPE role_enum;")
+    # Drop enum type with idempotent approach
+    op.execute("""
+    DO $$
+    BEGIN
+        DROP TYPE role_enum;
+    EXCEPTION
+        WHEN undefined_object THEN NULL;
+    END
+    $$;
+    """)
