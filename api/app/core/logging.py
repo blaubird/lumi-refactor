@@ -16,3 +16,6 @@ console_handler.setFormatter(formatter)
 # Add handler to logger
 logger.addHandler(console_handler)
 logger.setLevel(logging_module.INFO)
+
+# Export logger as logging for backward compatibility
+logging = logger
