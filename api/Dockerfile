@@ -9,5 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Run the application
-CMD ["hypercorn", "main:app", "--bind", "0.0.0.0:$PORT"]
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Run the application using the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
