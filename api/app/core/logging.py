@@ -1,21 +1,34 @@
-import os
-import logging as logging_module
+"""Logging module."""
+import logging
+from logging.config import dictConfig
+
 
 # Configure logging
-logger = logging_module.getLogger(__name__)
+def setup_logging():
+    """Set up logging configuration."""
+    log_config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "level": "INFO",
+                "formatter": "default",
+            },
+        },
+        "root": {
+            "level": "INFO",
+            "handlers": ["console"],
+        },
+    }
+    dictConfig(log_config)
 
-# Create formatter
-formatter = logging_module.Formatter(
-    "%(levelname)s [%(name)s] [%(module)s:%(lineno)d] %(message)s"
-)
 
-# Create console handler
-console_handler = logging_module.StreamHandler()
-console_handler.setFormatter(formatter)
-
-# Add handler to logger
-logger.addHandler(console_handler)
-logger.setLevel(logging_module.INFO)
-
-# Export logger as logging for backward compatibility
-logging = logger
+# Set up logging
+setup_logging()
+logging = logging.getLogger(__name__)

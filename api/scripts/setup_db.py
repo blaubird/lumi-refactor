@@ -1,78 +1,80 @@
-#!/usr/bin/env python3
-import os
+"""Setup database script."""
+import argparse
 import sys
-import psycopg2
-from alembic.config import Config
-from alembic import command
-import logging
+from pathlib import Path
 
-# Add parent directory to sys.path to make 'app' importable
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent))
 
-# Configure basic logging since we can't import app.core.logging yet
-logging.basicConfig(
-    format="%(levelname)s [%(name)s] [%(module)s:%(lineno)d] %(message)s",
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Import after path setup
+from app.core.database import Base, SessionLocal, engine
+from app.models.faq import FAQ
+from app.models.tenant import Tenant
 
-def setup_database():
-    """Set up database before application startup"""
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise ValueError("DATABASE_URL environment variable is not set")
-    
-    logger.info("Setting up database...")
-    
-    try:
-        # Connect to database
-        conn = psycopg2.connect(database_url)
-        conn.autocommit = True
-        cursor = conn.cursor()
-        
-        # Check if role_enum type already exists and drop it if needed
-        logger.info("Checking for existing enum types...")
-        cursor.execute("SELECT typname FROM pg_type WHERE typname = 'role_enum';")
-        if cursor.fetchone():
-            logger.info("Dropping existing role_enum type...")
-            # Check if any tables use this enum
-            cursor.execute("""
-                SELECT c.relname 
-                FROM pg_class c 
-                JOIN pg_attribute a ON a.attrelid = c.oid 
-                JOIN pg_type t ON a.atttypid = t.oid 
-                WHERE t.typname = 'role_enum' AND c.relkind = 'r';
-            """)
-            tables = cursor.fetchall()
-            
-            if tables:
-                logger.info(f"Found tables using role_enum: {tables}")
-                # Drop tables that use the enum
-                for table in tables:
-                    logger.info(f"Dropping table {table[0]}...")
-                    cursor.execute(f"DROP TABLE IF EXISTS {table[0]} CASCADE;")
-            
-            # Now drop the enum type
-            cursor.execute("DROP TYPE role_enum;")
-            logger.info("Dropped role_enum type")
-        
-        # Activate pgvector extension
-        logger.info("Activating pgvector extension...")
-        cursor.execute('CREATE EXTENSION IF NOT EXISTS vector;')
-        
-        # Close connection
-        cursor.close()
-        conn.close()
-        
-        # Apply migrations
-        logger.info("Applying migrations...")
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        
-        logger.info("Database setup complete")
-    except Exception as e:
-        logger.error(f"Error setting up database: {str(e)}")
-        raise
+
+def setup_database(create_sample_data: bool = False):
+    """Set up the database."""
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created.")
+
+    if create_sample_data:
+        # Create sample data
+        db = SessionLocal()
+        try:
+            # Create sample tenant if it doesn't exist
+            tenant = db.query(Tenant).filter(Tenant.name == "sample").first()
+            if not tenant:
+                tenant = Tenant(name="sample", api_key="sample_api_key")
+                db.add(tenant)
+                db.commit()
+                db.refresh(tenant)
+                print(f"Created sample tenant with ID: {tenant.id}")
+            else:
+                print(f"Sample tenant already exists with ID: {tenant.id}")
+
+            # Create sample FAQs
+            sample_faqs = [
+                {
+                    "question": "What is Lumi?",
+                    "answer": "Lumi is an AI-powered knowledge base system."
+                },
+                {
+                    "question": "How do I add new FAQs?",
+                    "answer": "You can add new FAQs through the admin API."
+                },
+                {
+                    "question": "What technologies does Lumi use?",
+                    "answer": "Lumi uses FastAPI, SQLAlchemy, and OpenAI."
+                },
+                {
+                    "question": "Is Lumi open source?",
+                    "answer": "Yes, Lumi is available under the MIT license."
+                }
+            ]
+
+            for faq_data in sample_faqs:
+                faq = FAQ(
+                    tenant_id=tenant.id,
+                    question=faq_data["question"],
+                    answer=faq_data["answer"]
+                )
+                db.add(faq)
+
+            db.commit()
+            print("Sample FAQs created.")
+        finally:
+            db.close()
+
 
 if __name__ == "__main__":
-    setup_database()
+    parser = argparse.ArgumentParser(description="Set up the database")
+    parser.add_argument(
+        "--sample-data",
+        action="store_true",
+        help="Create sample data",
+    )
+    args = parser.parse_args()
+
+    # Set up database
+    setup_database(create_sample_data=args.sample_data)

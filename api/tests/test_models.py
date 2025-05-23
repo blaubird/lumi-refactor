@@ -1,85 +1,104 @@
+"""Test models module."""
 import pytest
 from sqlalchemy.exc import IntegrityError
+
+from app.models.faq import FAQ
+from app.models.message import Message
 from app.models.tenant import Tenant
 
-def test_tenant_create(test_db):
-    # Create a test tenant
-    tenant = Tenant(
-        id="test_tenant_1",
-        phone_id="123456789",
-        wh_token="test_token",
-        system_prompt="Test system prompt"
-    )
-    
-    # Add to database
+
+def test_tenant_creation(test_db):
+    """Test tenant creation."""
+    # Create tenant
+    tenant = Tenant(name="Test Tenant", api_key="test_api_key")
     test_db.add(tenant)
     test_db.commit()
     
-    # Query to verify
-    db_tenant = test_db.query(Tenant).filter(Tenant.id == "test_tenant_1").first()
+    # Retrieve tenant
+    retrieved = test_db.query(Tenant).filter(Tenant.id == tenant.id).first()
     
     # Assertions
-    assert db_tenant is not None
-    assert db_tenant.id == "test_tenant_1"
-    assert db_tenant.phone_id == "123456789"
-    assert db_tenant.wh_token == "test_token"
-    assert db_tenant.system_prompt == "Test system prompt"
+    assert retrieved is not None
+    assert retrieved.name == "Test Tenant"
+    assert retrieved.api_key == "test_api_key"
 
-def test_tenant_default_system_prompt(test_db):
-    # Create a tenant without specifying system_prompt
-    tenant = Tenant(
-        id="test_tenant_2",
-        phone_id="987654321",
-        wh_token="another_token"
-    )
-    
-    # Add to database
+
+def test_faq_creation(test_db):
+    """Test FAQ creation."""
+    # Create tenant
+    tenant = Tenant(name="Test Tenant", api_key="test_api_key")
     test_db.add(tenant)
     test_db.commit()
     
-    # Query to verify
-    db_tenant = test_db.query(Tenant).filter(Tenant.id == "test_tenant_2").first()
-    
-    # Assert default system prompt is set
-    assert db_tenant.system_prompt == "You are a helpful assistant."
-
-def test_tenant_unique_phone_id(test_db):
-    # Create first tenant
-    tenant1 = Tenant(
-        id="test_tenant_3",
-        phone_id="555555555",
-        wh_token="token1"
+    # Create FAQ
+    faq = FAQ(
+        tenant_id=tenant.id,
+        question="Test question?",
+        answer="Test answer."
     )
-    test_db.add(tenant1)
+    test_db.add(faq)
     test_db.commit()
     
-    # Create second tenant with same phone_id
-    tenant2 = Tenant(
-        id="test_tenant_4",
-        phone_id="555555555",  # Same phone_id as tenant1
-        wh_token="token2"
-    )
-    test_db.add(tenant2)
+    # Retrieve FAQ
+    retrieved = test_db.query(FAQ).filter(FAQ.id == faq.id).first()
     
-    # Should raise IntegrityError due to unique constraint
-    with pytest.raises(IntegrityError):
-        test_db.commit()
-    
-    # Rollback for cleanup
-    test_db.rollback()
+    # Assertions
+    assert retrieved is not None
+    assert retrieved.question == "Test question?"
+    assert retrieved.answer == "Test answer."
+    assert retrieved.tenant_id == tenant.id
 
-def test_tenant_nullable_fields(test_db):
-    # Test that required fields cannot be null
-    tenant = Tenant(
-        id="test_tenant_5",
-        phone_id=None,  # This should cause an error
-        wh_token="token"
-    )
+
+def test_message_creation(test_db):
+    """Test message creation."""
+    # Create tenant
+    tenant = Tenant(name="Test Tenant", api_key="test_api_key")
     test_db.add(tenant)
+    test_db.commit()
     
-    # Should raise IntegrityError due to NOT NULL constraint
-    with pytest.raises(IntegrityError):
-        test_db.commit()
+    # Create message
+    message = Message(
+        tenant_id=tenant.id,
+        user_id="test_user",
+        content="Test message",
+        role="user"
+    )
+    test_db.add(message)
+    test_db.commit()
     
-    # Rollback for cleanup
-    test_db.rollback()
+    # Retrieve message
+    retrieved = test_db.query(Message).filter(Message.id == message.id).first()
+    
+    # Assertions
+    assert retrieved is not None
+    assert retrieved.content == "Test message"
+    assert retrieved.user_id == "test_user"
+    assert retrieved.role == "user"
+    assert retrieved.tenant_id == tenant.id
+
+
+def test_faq_tenant_relationship(test_db):
+    """Test FAQ-tenant relationship."""
+    # Create tenant
+    tenant = Tenant(name="Test Tenant", api_key="test_api_key")
+    test_db.add(tenant)
+    test_db.commit()
+    
+    # Create FAQ
+    faq = FAQ(
+        tenant_id=tenant.id,
+        question="Test question?",
+        answer="Test answer."
+    )
+    test_db.add(faq)
+    test_db.commit()
+    
+    # Delete tenant
+    test_db.delete(tenant)
+    test_db.commit()
+    
+    # Try to retrieve FAQ (should be deleted due to CASCADE)
+    retrieved = test_db.query(FAQ).filter(FAQ.id == faq.id).first()
+    
+    # Assertions
+    assert retrieved is None

@@ -1,6 +1,6 @@
 from .base import Base
-from .tenant import Tenant
-from .message import Message
 from .faq import FAQ
+from .message import Message
+from .tenant import Tenant
 
 __all__ = ["Base", "Tenant", "Message", "FAQ"]

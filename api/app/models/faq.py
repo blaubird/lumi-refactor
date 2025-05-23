@@ -1,15 +1,42 @@
-from sqlalchemy import String, Text, DateTime, Integer, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
-from pgvector.sqlalchemy import Vector
-from .base import Base
+"""FAQ model module."""
+import numpy as np
+from sqlalchemy import Column, Float, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY
 
-class FAQ(Base):
-    __tablename__ = "faqs"
-    
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    tenant_id: Mapped[str] = mapped_column(String, ForeignKey("tenants.id"), nullable=False, index=True)
-    question: Mapped[str] = mapped_column(Text, nullable=False)
-    answer: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[Vector] = mapped_column(Vector(1536), nullable=True)
-    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+from app.models.base import BaseModel
+
+
+class FAQ(BaseModel):
+    """FAQ model."""
+
+    tenant_id = Column(
+        String, ForeignKey("tenant.id", ondelete="CASCADE"), nullable=False
+    )
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    _embedding = Column(ARRAY(Float), nullable=True)
+
+    def __init__(self, **kwargs):
+        """Initialize FAQ."""
+        super().__init__(**kwargs)
+        self._embedding_array = None
+
+    @property
+    def embedding(self):
+        """Get embedding."""
+        return self._embedding_array
+
+    @embedding.setter
+    def embedding(self, value):
+        """Set embedding."""
+        self._embedding_array = value
+
+    def cosine_similarity(self, other_embedding):
+        """Calculate cosine similarity between embeddings."""
+        if self.embedding is None or other_embedding is None:
+            return 0.0
+
+        a = np.array(self.embedding)
+        b = np.array(other_embedding)
+
+        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))

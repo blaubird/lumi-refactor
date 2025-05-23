@@ -1,21 +1,22 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.core.logging import logging as logger
-from app.api.deps import get_db
 import os
+
+from app.api.deps import get_db
+from app.core.logging import logging as logger
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
+
 @router.get("/webhook")
 def verify_webhook(
-    hub_mode: str = None,
-    hub_verify_token: str = None,
-    hub_challenge: str = None
+    hub_mode: str = None, hub_verify_token: str = None, hub_challenge: str = None
 ):
     """Handler for webhook verification from Meta"""
     if hub_mode == "subscribe" and hub_verify_token == os.getenv("WH_TOKEN"):
         return int(hub_challenge)
     raise HTTPException(status_code=403, detail="Verification failed")
+
 
 @router.post("/webhook")
 def webhook_handler(request: Request, db: Session = Depends(get_db)):
@@ -23,7 +24,7 @@ def webhook_handler(request: Request, db: Session = Depends(get_db)):
     try:
         # Log webhook receipt
         logger.info("Received webhook request")
-        
+
         # Return successful response
         return {"status": "ok"}
     except Exception as e:

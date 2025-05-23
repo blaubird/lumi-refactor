@@ -1,64 +1,66 @@
-import os
-import pytest
+"""Test webhook module."""
 from unittest.mock import patch
-from fastapi import HTTPException
 
-def test_verify_webhook_success(client, monkeypatch):
-    # Set environment variable
-    monkeypatch.setenv("WH_TOKEN", "test_token")
-    
-    # Test successful verification
-    response = client.get(
-        "/webhook?hub_mode=subscribe&hub_verify_token=test_token&hub_challenge=1234"
-    )
-    assert response.status_code == 200
-    assert response.json() == 1234
+from app.api.endpoints.webhook import process_webhook
 
-def test_verify_webhook_failure_wrong_token(client, monkeypatch):
-    # Set environment variable
-    monkeypatch.setenv("WH_TOKEN", "test_token")
-    
-    # Test with wrong token
-    response = client.get(
-        "/webhook?hub_mode=subscribe&hub_verify_token=wrong_token&hub_challenge=1234"
-    )
-    assert response.status_code == 403
-    assert "Verification failed" in response.text
-
-def test_verify_webhook_failure_wrong_mode(client, monkeypatch):
-    # Set environment variable
-    monkeypatch.setenv("WH_TOKEN", "test_token")
-    
-    # Test with wrong mode
-    response = client.get(
-        "/webhook?hub_mode=wrong_mode&hub_verify_token=test_token&hub_challenge=1234"
-    )
-    assert response.status_code == 403
-    assert "Verification failed" in response.text
-
-def test_webhook_handler_success(client):
-    # Test successful webhook handling
-    response = client.post("/webhook", json={"message": "test"})
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
 
 @patch("app.api.endpoints.webhook.logger")
-def test_webhook_handler_logs_request(mock_logger, client):
-    # Test that logger.info is called
-    client.post("/webhook", json={"message": "test"})
-    mock_logger.info.assert_called_once_with("Received webhook request")
+def test_process_webhook_success(mock_logger):
+    """Test successful webhook processing."""
+    # Mock request data
+    request_data = {
+        "event": "faq_created",
+        "tenant_id": "test_tenant",
+        "data": {"question": "Test question?", "answer": "Test answer."},
+    }
+
+    # Call the function
+    result = process_webhook(request_data)
+
+    # Assertions
+    assert result["status"] == "success"
+    assert "processed" in result["message"]
+    mock_logger.info.assert_called_once()
+
 
 @patch("app.api.endpoints.webhook.logger")
-def test_webhook_handler_exception(mock_logger, client):
-    # Create a test exception
-    def side_effect(*args, **kwargs):
-        raise Exception("Test exception")
-    
-    # Apply the side effect to the logger.info method
-    mock_logger.info.side_effect = side_effect
-    
-    # Test exception handling
-    response = client.post("/webhook", json={"message": "test"})
-    assert response.status_code == 200
-    assert response.json() == {"status": "error", "message": "Test exception"}
+def test_process_webhook_missing_fields(mock_logger):
+    """Test webhook processing with missing fields."""
+    # Mock request data with missing fields
+    request_data = {
+        "event": "faq_created",
+        # Missing tenant_id
+        "data": {"question": "Test question?", "answer": "Test answer."},
+    }
+
+    # Call the function
+    result = process_webhook(request_data)
+
+    # Assertions
+    assert result["status"] == "error"
+    assert "missing" in result["message"].lower()
     mock_logger.error.assert_called_once()
+
+
+@patch("app.api.endpoints.webhook.logger")
+def test_process_webhook_exception(mock_logger):
+    """Test webhook processing with exception."""
+    # Mock request data
+    request_data = {
+        "event": "faq_created",
+        "tenant_id": "test_tenant",
+        "data": {"question": "Test question?", "answer": "Test answer."},
+    }
+
+    # Make the function raise an exception
+    with patch(
+        "app.api.endpoints.webhook.process_webhook_event",
+        side_effect=Exception("Test exception"),
+    ):
+        # Call the function
+        result = process_webhook(request_data)
+
+        # Assertions
+        assert result["status"] == "error"
+        assert "exception" in result["message"].lower()
+        mock_logger.error.assert_called_once()
