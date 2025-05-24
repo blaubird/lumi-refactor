@@ -1,5 +1,5 @@
 #!/bin/bash
-# Railway-specific entrypoint that ensures the process stays running
+# Railway-specific entrypoint with proper configuration
 
 # Set default port with explicit logging
 export PORT=${PORT:-8080}
