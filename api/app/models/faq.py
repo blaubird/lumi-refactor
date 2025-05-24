@@ -8,7 +8,9 @@ from sqlalchemy.dialects.postgresql import ARRAY
 
 class FAQ(BaseModel):
     """FAQ model."""
-
+    
+    __tablename__ = "faq"
+    
     tenant_id = Column(
         String, ForeignKey("tenant.id", ondelete="CASCADE"), nullable=False
     )
