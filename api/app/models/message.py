@@ -6,7 +6,9 @@ from sqlalchemy import Column, ForeignKey, String, Text
 
 class Message(BaseModel):
     """Message model."""
-
+    
+    __tablename__ = "message"
+    
     tenant_id = Column(
         String, ForeignKey("tenant.id", ondelete="CASCADE"), nullable=False
     )
