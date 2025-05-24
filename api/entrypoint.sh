@@ -4,9 +4,16 @@
 # Set default port if not provided
 export PORT=${PORT:-8080}
 
-# Run database setup
-python scripts/setup_db.py
+# Configure logging
+echo "Starting application initialization at $(date)"
+
+# Run database setup with error handling
+echo "Running database setup..."
+python scripts/setup_db.py || {
+    echo "Database setup failed with exit code $?"
+    echo "Continuing with application startup anyway..."
+}
 
 # Start the application with the correct port and keep it running
-# Adding --keep-alive option to ensure the process stays running
-exec hypercorn main:app --bind 0.0.0.0:$PORT --keep-alive
+echo "Starting Hypercorn server on port $PORT..."
+exec hypercorn main:app --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - --log-level info
