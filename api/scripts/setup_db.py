@@ -1,4 +1,5 @@
 """Setup database script."""
+
 import argparse
 import sys
 from pathlib import Path
@@ -37,27 +38,27 @@ def setup_database(create_sample_data: bool = False):
             sample_faqs = [
                 {
                     "question": "What is Lumi?",
-                    "answer": "Lumi is an AI-powered knowledge base system."
+                    "answer": "Lumi is an AI-powered knowledge base system.",
                 },
                 {
                     "question": "How do I add new FAQs?",
-                    "answer": "You can add new FAQs through the admin API."
+                    "answer": "You can add new FAQs through the admin API.",
                 },
                 {
                     "question": "What technologies does Lumi use?",
-                    "answer": "Lumi uses FastAPI, SQLAlchemy, and OpenAI."
+                    "answer": "Lumi uses FastAPI, SQLAlchemy, and OpenAI.",
                 },
                 {
                     "question": "Is Lumi open source?",
-                    "answer": "Yes, Lumi is available under the MIT license."
-                }
+                    "answer": "Yes, Lumi is available under the MIT license.",
+                },
             ]
 
             for faq_data in sample_faqs:
                 faq = FAQ(
                     tenant_id=tenant.id,
                     question=faq_data["question"],
-                    answer=faq_data["answer"]
+                    answer=faq_data["answer"],
                 )
                 db.add(faq)
 

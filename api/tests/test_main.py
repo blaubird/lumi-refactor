@@ -1,4 +1,5 @@
 """Test main module."""
+
 # Removed unused import: pytest
 from fastapi.testclient import TestClient
 

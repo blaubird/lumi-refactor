@@ -1,4 +1,5 @@
 """AI services module."""
+
 import logging
 import os
 from typing import List, Optional
@@ -84,9 +85,7 @@ async def get_rag_response(
         track_rag_query(tenant_id=tenant_id, success=True)
 
         # Find relevant FAQs
-        relevant_faqs = await find_relevant_faqs(
-            db, tenant_id, query, top_k=top_k
-        )
+        relevant_faqs = await find_relevant_faqs(db, tenant_id, query, top_k=top_k)
         if not relevant_faqs:
             logger.warning("No relevant FAQs found")
             return "I couldn't find any relevant information to answer your question."

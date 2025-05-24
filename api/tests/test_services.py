@@ -1,9 +1,11 @@
 """Test services module."""
+
 # Removed unused import: os
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.ai import find_relevant_faqs, generate_embedding, get_rag_response
+
 # Removed unused import: sqlalchemy.orm.Session
 from app.models.faq import FAQ
 

@@ -1,4 +1,5 @@
 """Monitoring module for the API."""
+
 import logging
 import time
 from datetime import datetime
@@ -66,9 +67,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             status_code = response.status_code
 
             # Record metrics
-            REQUEST_COUNT.labels(
-                method=method, endpoint=path, status=status_code
-            ).inc()
+            REQUEST_COUNT.labels(method=method, endpoint=path, status=status_code).inc()
             TENANT_REQUEST_COUNT.labels(
                 tenant_id=tenant_id, method=method, endpoint=path
             ).inc()

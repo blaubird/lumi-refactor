@@ -1,4 +1,5 @@
 """Main application module."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

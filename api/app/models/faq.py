@@ -1,4 +1,5 @@
 """FAQ model module."""
+
 import numpy as np
 from sqlalchemy import Column, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY

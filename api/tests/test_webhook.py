@@ -1,4 +1,5 @@
 """Test webhook module."""
+
 from unittest.mock import patch
 
 from app.api.endpoints.webhook import process_webhook

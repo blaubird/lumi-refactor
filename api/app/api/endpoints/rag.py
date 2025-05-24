@@ -1,4 +1,5 @@
 """RAG endpoints module."""
+
 import logging
 from typing import List
 
@@ -24,15 +25,13 @@ async def query(
 ):
     """
     Query the RAG system.
-    
+
     This endpoint takes a query and returns a response generated using
     relevant FAQs as context.
     """
     try:
         # Log the query
-        logger.info(
-            f"RAG query received from tenant {tenant_id}: {query.query}"
-        )
+        logger.info(f"RAG query received from tenant {tenant_id}: {query.query}")
 
         # Get response
         response = await get_rag_response(
@@ -51,9 +50,8 @@ async def query(
     except Exception as e:
         # Log the error
         logger.error(f"Error processing RAG query: {str(e)}")
-        
+
         # Return error
         raise HTTPException(
-            status_code=500,
-            detail="An error occurred while processing your query."
+            status_code=500, detail="An error occurred while processing your query."
         )

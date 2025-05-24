@@ -1,4 +1,5 @@
 """Logging module."""
+
 import logging
 from logging.config import dictConfig
 

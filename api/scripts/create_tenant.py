@@ -1,4 +1,5 @@
 """Create tenant script."""
+
 import argparse
 import sys
 from pathlib import Path

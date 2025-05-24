@@ -1,6 +1,8 @@
 """Admin schemas module."""
+
 from datetime import datetime
 from typing import List, Optional
+
 # Removed unused import: Dict
 
 from pydantic import BaseModel, Field
@@ -67,9 +69,7 @@ class FAQ(FAQBase):
 
     id: str = Field(..., description="Unique identifier for the FAQ")
     tenant_id: str = Field(..., description="Tenant ID this FAQ belongs to")
-    created_at: datetime = Field(
-        ..., description="Timestamp when the FAQ was created"
-    )
+    created_at: datetime = Field(..., description="Timestamp when the FAQ was created")
     updated_at: datetime = Field(
         ..., description="Timestamp when the FAQ was last updated"
     )
