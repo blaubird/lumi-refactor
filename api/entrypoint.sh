@@ -1,5 +1,5 @@
 #!/bin/bash
-# entrypoint.sh - Handles startup for the FastAPI application
+# entrypoint.sh - Optimized startup for the FastAPI application
 
 # Set default port if not provided
 export PORT=${PORT:-8080}
@@ -14,6 +14,6 @@ python scripts/setup_db.py || {
     echo "Continuing with application startup anyway..."
 }
 
-# Start the application with the correct port and keep it running
+# Start the application with optimized Hypercorn settings
 echo "Starting Hypercorn server on port $PORT..."
-exec hypercorn main:app --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - --log-level info
+exec hypercorn main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class=asyncio --access-logfile - --error-logfile - --log-level info
