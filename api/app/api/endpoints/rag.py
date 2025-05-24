@@ -3,12 +3,11 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
 from app.api.deps import get_db, get_tenant_id
 from app.schemas.rag import RAGQuery, RAGResponse
 from app.services.ai import get_rag_response
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 # Configure logging
 logger = logging.getLogger(__name__)

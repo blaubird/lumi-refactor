@@ -5,11 +5,10 @@ import os
 from typing import List, Optional
 
 import openai
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.models.faq import FAQ
 from app.services.monitoring import track_embedding_generation, track_rag_query
+from sqlalchemy.orm import Session
 
 # Configure logging
 logger = logging.getLogger(__name__)

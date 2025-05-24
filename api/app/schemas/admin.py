@@ -3,9 +3,9 @@
 from datetime import datetime
 from typing import List, Optional
 
-# Removed unused import: Dict
-
 from pydantic import BaseModel, Field
+
+# Removed unused import: Dict
 
 
 class TenantBase(BaseModel):

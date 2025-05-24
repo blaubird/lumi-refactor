@@ -1,11 +1,10 @@
 """Test models module."""
 
 import pytest
-from sqlalchemy.exc import IntegrityError
-
 from app.models.faq import FAQ
 from app.models.message import Message
 from app.models.tenant import Tenant
+from sqlalchemy.exc import IntegrityError
 
 
 def test_tenant_creation(test_db):

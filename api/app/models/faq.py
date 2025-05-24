@@ -1,10 +1,9 @@
 """FAQ model module."""
 
 import numpy as np
+from app.models.base import BaseModel
 from sqlalchemy import Column, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
-
-from app.models.base import BaseModel
 
 
 class FAQ(BaseModel):

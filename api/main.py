@@ -1,12 +1,11 @@
 """Main application module."""
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.api.endpoints import admin, rag, webhook
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.services.monitoring import setup_monitoring
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create FastAPI app
 app = FastAPI(

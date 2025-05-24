@@ -1,8 +1,7 @@
 """Message model module."""
 
-from sqlalchemy import Column, ForeignKey, String, Text
-
 from app.models.base import BaseModel
+from sqlalchemy import Column, ForeignKey, String, Text
 
 
 class Message(BaseModel):

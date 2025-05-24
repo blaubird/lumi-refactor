@@ -1,13 +1,13 @@
 """Test services module."""
 
 # Removed unused import: os
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.services.ai import find_relevant_faqs, generate_embedding, get_rag_response
+import pytest
 
 # Removed unused import: sqlalchemy.orm.Session
 from app.models.faq import FAQ
+from app.services.ai import find_relevant_faqs, generate_embedding, get_rag_response
 
 # Mock data
 MOCK_EMBEDDING = [0.1] * 1536  # 1536-dimensional vector with all values as 0.1
