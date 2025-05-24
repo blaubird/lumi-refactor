@@ -1,3 +1,5 @@
+# Dockerfile with Dependency Fix
+
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -11,8 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements file
 COPY requirements.txt .
 
-# Install dependencies with optimized pip settings
-RUN pip install --no-cache-dir --compile --no-deps -r requirements.txt
+# Update pip and install dependencies with optimized settings
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --compile -r requirements.txt
 
 # Copy application code
 COPY . .
