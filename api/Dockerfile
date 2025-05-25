@@ -1,5 +1,3 @@
-# Dockerfile with Dependency Fix
-
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -20,8 +18,5 @@ RUN pip install --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Make entrypoint script executable
-RUN chmod +x /app/entrypoint.sh
-
-# Run the application using the entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Use CMD instead of ENTRYPOINT for direct execution
+CMD hypercorn main:app --bind 0.0.0.0:$PORT --worker-class asyncio
