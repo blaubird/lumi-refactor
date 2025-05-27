@@ -2,11 +2,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 
+# Исправленные импорты с использованием абсолютных путей
 from app.api.deps import get_db
 from app.models.tenant import Tenant
 from app.services.ai import get_rag_response, load_embedding_model
-from schemas.rag import RAGQueryRequest, RAGResponse # Define these schemas
-from logging_utils import get_logger
+from app.schemas.rag import RAGQueryRequest, RAGResponse
+from app.core.logging import get_logger
 
 # Инициализируем структурированный логгер
 logger = get_logger(__name__)
@@ -18,56 +19,61 @@ router = APIRouter(
 
 @router.post("/query/", response_model=RAGResponse)
 async def query_rag_system(
-    request_data: RAGQueryRequest,
+    query: RAGQueryRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Receives a user query and tenant ID, retrieves relevant context using RAG,
-    and returns a generated response.
+    Обрабатывает RAG-запрос и возвращает ответ, сгенерированный на основе релевантных FAQ.
     """
-    logger.info("RAG query received", extra={
-        "tenant_id": request_data.tenant_id,
-        "query": request_data.query
-    })
-
-    # 1. Fetch tenant to get system_prompt (or pass it directly if preferred)
-    tenant = db.query(Tenant).filter(Tenant.id == request_data.tenant_id).first()
-    if not tenant:
-        logger.warning("Tenant not found", extra={"tenant_id": request_data.tenant_id})
-        raise HTTPException(status_code=404, detail=f"Tenant with id {request_data.tenant_id} not found.")
-    
-    system_prompt = tenant.system_prompt
-    if not system_prompt:
-        logger.warning("System prompt not set for tenant, using default", extra={
-            "tenant_id": request_data.tenant_id
-        })
-        system_prompt = "You are a helpful assistant."
-
     try:
-        # 2. Get RAG response
-        answer = await get_rag_response(
-            db=db,
-            tenant_id=request_data.tenant_id,
-            user_query=request_data.query,
-            system_prompt=system_prompt
+        # Логируем получение запроса
+        logger.info(
+            "RAG query received",
+            extra={
+                "query_length": len(query.query),
+                "tenant_id": query.tenant_id
+            }
         )
         
-        logger.info("Successfully generated RAG response", extra={
-            "tenant_id": request_data.tenant_id,
-            "response_length": len(answer) if answer else 0
-        })
-        return RAGResponse(answer=answer, tenant_id=request_data.tenant_id, query=request_data.query)
-    
-    except RuntimeError as e:
-        # This can happen if the embedding model is not loaded
-        logger.error("RuntimeError during RAG processing", extra={
-            "tenant_id": request_data.tenant_id,
-            "error_type": "RuntimeError"
-        }, exc_info=e)
-        raise HTTPException(status_code=503, detail=str(e)) # Service Unavailable if model is critical
+        # Получаем данные тенанта
+        tenant = db.query(Tenant).filter(Tenant.id == query.tenant_id).first()
+        if not tenant:
+            logger.warning(
+                "Tenant not found for RAG query",
+                extra={"tenant_id": query.tenant_id}
+            )
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        
+        # Получаем ответ от RAG-системы
+        response = await get_rag_response(
+            query=query.query,
+            tenant_id=query.tenant_id,
+            db=db,
+            system_prompt=tenant.system_prompt
+        )
+        
+        # Логируем успешный ответ
+        logger.info(
+            "RAG response generated",
+            extra={
+                "tenant_id": query.tenant_id,
+                "response_length": len(response.answer),
+                "sources_count": len(response.sources)
+            }
+        )
+        
+        return response
     except Exception as e:
-        logger.error("Unexpected error during RAG processing", extra={
-            "tenant_id": request_data.tenant_id,
-            "error_type": type(e).__name__
-        }, exc_info=e)
-        raise HTTPException(status_code=500, detail="An internal error occurred while processing your request.")
+        # Логируем ошибку
+        logger.error(
+            f"Error processing RAG query: {str(e)}",
+            extra={
+                "tenant_id": query.tenant_id,
+                "error": str(e)
+            },
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing query: {str(e)}"
+        )
