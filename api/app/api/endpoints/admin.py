@@ -7,16 +7,16 @@ import math
 from datetime import datetime   
 from typing import Optional, List
 
-# Changed to absolute imports assuming admin.py is in routers/ and other modules are at the same level as routers/
+# Исправленные импорты с использованием абсолютных путей
 from app.models.tenant import Tenant
 from app.models.faq import FAQ
 from app.models.message import Message
 from app.api.deps import get_db
 from app.schemas import admin as admin_schemas
-from schemas.bulk_import import BulkFAQImportRequest, BulkFAQImportResponse
-from app.services.ai import generate_embedding
-from logging_utils import get_logger
-from tasks import process_bulk_faq_import
+from app.schemas.bulk_import import BulkFAQImportRequest, BulkFAQImportResponse
+from app.services.ai import generate_embedding # Исправленный импорт для генерации эмбеддингов
+from app.core.logging import get_logger
+from app.core.tasks import process_bulk_faq_import
 
 # Инициализируем структурированный логгер
 logger = get_logger(__name__)
