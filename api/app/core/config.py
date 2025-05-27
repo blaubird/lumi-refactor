@@ -1,23 +1,23 @@
-"""Config module."""
-from pydantic_settings import BaseSettings
-
+import os
+from pydantic import BaseSettings, Field
 
 class Settings(BaseSettings):
-    """Application settings."""
-
-    PROJECT_NAME: str = "Lumi API"
-    PROJECT_DESCRIPTION: str = "AI-powered knowledge base API"
-    PROJECT_VERSION: str = "0.1.0"
+    """Application settings"""
+    # Database
+    DATABASE_URL: str = Field(..., env="DATABASE_URL")
     
-    DATABASE_URL: str = "sqlite:///./lumi.db"
+    # WhatsApp API
+    WH_TOKEN: str = Field(..., env="WH_TOKEN")
     
-    CORS_ORIGINS: list = ["*"]
+    # AI Service
+    OPENAI_API_KEY: str = Field(None, env="OPENAI_API_KEY")
     
-    OPENAI_MODEL: str = "gpt-3.5-turbo"
+    # Logging
+    LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")
     
     class Config:
-        """Pydantic config."""
         env_file = ".env"
+        case_sensitive = True
 
-
+# Create settings instance
 settings = Settings()

@@ -1,107 +1,96 @@
-"""Admin schemas module."""
-
-from datetime import datetime
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
+from typing import Optional, List, Generic, TypeVar, Dict, Any
+from datetime import datetime
 
-# Removed unused import: Dict
+# === Pagination Schemas ===
+T = TypeVar('T')
 
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
 
+# === Filter Schemas ===
+class TenantFilter(BaseModel):
+    phone_id: Optional[str] = None
+    system_prompt_contains: Optional[str] = None
+
+class FAQFilter(BaseModel):
+    question_contains: Optional[str] = None
+    answer_contains: Optional[str] = None
+    search_text: Optional[str] = None  # For full-text search across question and answer
+
+class MessageFilter(BaseModel):
+    role: Optional[str] = None
+    text_contains: Optional[str] = None
+    from_date: Optional[datetime] = None
+    to_date: Optional[datetime] = None
+
+# === Tenant Schemas ===
 class TenantBase(BaseModel):
-    """Base tenant schema."""
-
-    name: str = Field(..., description="Name of the tenant")
-    api_key: Optional[str] = Field(None, description="API key for the tenant")
-
+    phone_id: str = Field(..., description="WhatsApp Phone Number ID for the tenant")
+    wh_token: str = Field(..., description="WhatsApp Permanent Token for the tenant")
+    system_prompt: Optional[str] = Field("You are a helpful assistant.", description="Default system prompt for the AI")
 
 class TenantCreate(TenantBase):
-    """Tenant creation schema."""
+    id: str = Field(..., description="Unique identifier for the tenant (e.g., a slug or UUID)")
 
-    pass
+class TenantUpdate(BaseModel):
+    phone_id: Optional[str] = None
+    wh_token: Optional[str] = None
+    system_prompt: Optional[str] = None
 
-
-class TenantUpdate(TenantBase):
-    """Tenant update schema."""
-
-    name: Optional[str] = Field(None, description="Name of the tenant")
-
-
-class Tenant(TenantBase):
-    """Tenant schema."""
-
-    id: str = Field(..., description="Unique identifier for the tenant")
-    created_at: datetime = Field(
-        ..., description="Timestamp when the tenant was created"
-    )
-    updated_at: datetime = Field(
-        ..., description="Timestamp when the tenant was last updated"
-    )
+class TenantResponse(TenantBase):
+    id: str
 
     class Config:
-        """Pydantic config."""
+        from_attributes = True # Changed from orm_mode for Pydantic v2
 
-        orm_mode = True
-
-
+# === FAQ Schemas ===
 class FAQBase(BaseModel):
-    """Base FAQ schema."""
-
-    question: str = Field(..., description="Question text")
-    answer: str = Field(..., description="Answer text")
-
+    question: str = Field(..., description="The question part of the FAQ")
+    answer: str = Field(..., description="The answer part of the FAQ")
 
 class FAQCreate(FAQBase):
-    """FAQ creation schema."""
-
     pass
 
-
 class FAQUpdate(BaseModel):
-    """FAQ update schema."""
+    question: Optional[str] = None
+    answer: Optional[str] = None
+    # embedding: Optional[List[float]] = None # If embedding updates are handled via API
 
-    question: Optional[str] = Field(None, description="Question text")
-    answer: Optional[str] = Field(None, description="Answer text")
-
-
-class FAQ(FAQBase):
-    """FAQ schema."""
-
-    id: str = Field(..., description="Unique identifier for the FAQ")
-    tenant_id: str = Field(..., description="Tenant ID this FAQ belongs to")
-    created_at: datetime = Field(..., description="Timestamp when the FAQ was created")
-    updated_at: datetime = Field(
-        ..., description="Timestamp when the FAQ was last updated"
-    )
+class FAQResponse(FAQBase):
+    id: int
+    tenant_id: str
+    # embedding: Optional[List[float]] = None # Decide if embedding should be in response
+    ts: Optional[datetime] = None # Assuming 'ts' is part of your FAQ model
 
     class Config:
-        """Pydantic config."""
+        from_attributes = True # Changed from orm_mode for Pydantic v2
 
-        orm_mode = True
+# === Message Schemas ===
+class MessageBase(BaseModel):
+    role: str = Field(..., description="Role of the message sender (user or assistant)")
+    text: str = Field(..., description="Content of the message")
 
+class MessageCreate(MessageBase):
+    tenant_id: str = Field(..., description="ID of the tenant this message belongs to")
+    wa_msg_id: Optional[str] = Field(None, description="WhatsApp message ID (for user messages)")
 
-class FAQList(BaseModel):
-    """FAQ list schema."""
+class MessageUpdate(BaseModel):
+    role: Optional[str] = None
+    text: Optional[str] = None
+    wa_msg_id: Optional[str] = None
 
-    items: List[FAQ] = Field(..., description="List of FAQs")
-    total: int = Field(..., description="Total number of FAQs")
+class MessageResponse(MessageBase):
+    id: int
+    tenant_id: str
+    wa_msg_id: Optional[str] = None
+    ts: datetime
 
-
-class TenantList(BaseModel):
-    """Tenant list schema."""
-
-    items: List[Tenant] = Field(..., description="List of tenants")
-    total: int = Field(..., description="Total number of tenants")
-
-
-class APIKeyResponse(BaseModel):
-    """API key response schema."""
-
-    api_key: str = Field(..., description="Generated API key")
-
-
-class StatusResponse(BaseModel):
-    """Status response schema."""
-
-    status: str = Field(..., description="Operation status")
-    message: str = Field(..., description="Status message")
+    class Config:
+        from_attributes = True

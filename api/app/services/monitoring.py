@@ -1,157 +1,232 @@
-"""Monitoring module for the API."""
-
-import logging
+"""
+Модуль для настройки и экспорта метрик в Grafana Cloud.
+"""
+import os
 import time
-from datetime import datetime
+from fastapi import FastAPI, Request
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CollectorRegistry, multiprocess
+from starlette.responses import Response
 
-import prometheus_client
-from fastapi import FastAPI, Request, Response
-from prometheus_client import Counter, Gauge, Histogram
-from starlette.middleware.base import BaseHTTPMiddleware
+# Создаем реестр метрик
+registry = CollectorRegistry()
 
-# Configure logging
-logger = logging.getLogger(__name__)
-
-# Define metrics
-REQUEST_COUNT = Counter(
-    "http_requests_total", "Total count of requests", ["method", "endpoint", "status"]
-)
-REQUEST_LATENCY = Histogram(
-    "http_request_duration_seconds",
-    "Request latency in seconds",
-    ["method", "endpoint"],
-)
-ACTIVE_REQUESTS = Gauge(
-    "http_requests_active", "Active requests", ["method", "endpoint"]
-)
-ERROR_COUNT = Counter(
-    "http_request_errors_total", "Total count of errors", ["method", "endpoint"]
-)
-TENANT_REQUEST_COUNT = Counter(
-    "tenant_requests_total",
-    "Total count of requests per tenant",
-    ["tenant_id", "method", "endpoint"],
-)
-EMBEDDING_GENERATION_COUNT = Counter(
-    "embedding_generation_total", "Total count of embedding generations", ["tenant_id"]
-)
-EMBEDDING_GENERATION_ERROR_COUNT = Counter(
-    "embedding_generation_errors_total",
-    "Total count of embedding generation errors",
-    ["tenant_id"],
-)
-RAG_QUERY_COUNT = Counter(
-    "rag_query_total", "Total count of RAG queries", ["tenant_id"]
-)
-RAG_QUERY_ERROR_COUNT = Counter(
-    "rag_query_errors_total", "Total count of RAG query errors", ["tenant_id"]
+# Определяем метрики
+http_requests_total = Counter(
+    'http_requests_total', 
+    'Total number of HTTP requests',
+    ['method', 'endpoint', 'status_code'],
+    registry=registry
 )
 
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint'],
+    registry=registry
+)
 
-class PrometheusMiddleware(BaseHTTPMiddleware):
-    """Middleware for collecting Prometheus metrics."""
+openai_api_calls_total = Counter(
+    'openai_api_calls_total',
+    'Total number of OpenAI API calls',
+    ['model', 'endpoint'],
+    registry=registry
+)
 
-    async def dispatch(self, request: Request, call_next):
-        """Process the request and collect metrics."""
-        method = request.method
-        path = request.url.path
-        tenant_id = request.headers.get("X-Tenant-ID", "unknown")
+openai_api_duration_seconds = Histogram(
+    'openai_api_duration_seconds',
+    'OpenAI API call duration in seconds',
+    ['model', 'endpoint'],
+    registry=registry
+)
 
-        # Track request count and latency
-        ACTIVE_REQUESTS.labels(method=method, endpoint=path).inc()
+openai_api_tokens_total = Counter(
+    'openai_api_tokens_total',
+    'Total number of tokens used in OpenAI API calls',
+    ['model', 'type'],  # type: prompt, completion
+    registry=registry
+)
+
+celery_tasks_total = Counter(
+    'celery_tasks_total',
+    'Total number of Celery tasks',
+    ['task_name', 'status'],  # status: started, success, failure
+    registry=registry
+)
+
+celery_task_duration_seconds = Histogram(
+    'celery_task_duration_seconds',
+    'Celery task duration in seconds',
+    ['task_name'],
+    registry=registry
+)
+
+active_tenants_gauge = Gauge(
+    'active_tenants',
+    'Number of active tenants',
+    registry=registry
+)
+
+active_users_gauge = Gauge(
+    'active_users',
+    'Number of active users in the last 24 hours',
+    registry=registry
+)
+
+class PrometheusMiddleware:
+    """
+    Middleware для сбора метрик HTTP-запросов
+    """
+    def __init__(self, app: FastAPI):
+        self.app = app
+
+    async def __call__(self, request: Request, call_next):
         start_time = time.time()
+        
+        # Обрабатываем запрос
+        response = await call_next(request)
+        
+        # Измеряем время выполнения
+        duration = time.time() - start_time
+        
+        # Получаем endpoint (без параметров запроса)
+        endpoint = request.url.path
+        
+        # Инкрементируем счетчик запросов
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=endpoint,
+            status_code=response.status_code
+        ).inc()
+        
+        # Записываем время выполнения
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=endpoint
+        ).observe(duration)
+        
+        return response
 
-        # Process the request
-        try:
-            response = await call_next(request)
-            status_code = response.status_code
-
-            # Record metrics
-            REQUEST_COUNT.labels(method=method, endpoint=path, status=status_code).inc()
-            TENANT_REQUEST_COUNT.labels(
-                tenant_id=tenant_id, method=method, endpoint=path
-            ).inc()
-
-            # Log the request
-            logger.info(
-                f"Request: {method} {path} - Status: {status_code} - "
-                f"Tenant: {tenant_id}"
-            )
-
-            return response
-        except Exception:
-            # Record error metrics
-            ERROR_COUNT.labels(method=method, endpoint=path).inc()
-            logger.error(f"Error processing request: {method} {path}")
-            raise
-        finally:
-            # Record latency and decrement active requests
-            request_latency = time.time() - start_time
-            REQUEST_LATENCY.labels(method=method, endpoint=path).observe(
-                request_latency
-            )
-            ACTIVE_REQUESTS.labels(method=method, endpoint=path).dec()
-
-
-def track_embedding_generation(tenant_id: str, success: bool = True):
-    """Track embedding generation metrics."""
-    EMBEDDING_GENERATION_COUNT.labels(tenant_id=tenant_id).inc()
-    if not success:
-        EMBEDDING_GENERATION_ERROR_COUNT.labels(tenant_id=tenant_id).inc()
-        logger.error(f"Embedding generation failed for tenant: {tenant_id}")
-    else:
-        logger.info(f"Embedding generation succeeded for tenant: {tenant_id}")
-
-
-def track_rag_query(tenant_id: str, success: bool = True):
-    """Track RAG query metrics."""
-    RAG_QUERY_COUNT.labels(tenant_id=tenant_id).inc()
-    if not success:
-        RAG_QUERY_ERROR_COUNT.labels(tenant_id=tenant_id).inc()
-        logger.error(f"RAG query failed for tenant: {tenant_id}")
-    else:
-        logger.info(f"RAG query succeeded for tenant: {tenant_id}")
-
-
-def setup_monitoring(app: FastAPI):
-    """Set up monitoring for the FastAPI application."""
-    # Add Prometheus middleware
+def setup_metrics(app: FastAPI):
+    """
+    Настройка сбора метрик для FastAPI приложения
+    """
+    # Добавляем middleware для сбора метрик HTTP-запросов
     app.add_middleware(PrometheusMiddleware)
-
-    # Add Prometheus metrics endpoint
-    @app.get("/metrics")
+    
+    # Добавляем endpoint для экспорта метрик
+    @app.get("/metrics", include_in_schema=False)
     async def metrics():
-        """Expose Prometheus metrics."""
         return Response(
-            prometheus_client.generate_latest(),
-            media_type="text/plain",
+            content=generate_latest(registry),
+            media_type=CONTENT_TYPE_LATEST
         )
+    
+    # Инициализируем метрики при запуске
+    @app.on_event("startup")
+    async def startup_metrics():
+        # Инициализация метрик, которые требуют данных из БД
+        # Например, количество активных тенантов
+        pass
 
-    # Add health check endpoint
-    @app.get("/health")
-    async def health():
-        """Health check endpoint."""
-        return {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-        }
+def track_openai_call(model: str, endpoint: str):
+    """
+    Декоратор для отслеживания вызовов OpenAI API
+    """
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            start_time = time.time()
+            
+            # Инкрементируем счетчик вызовов API
+            openai_api_calls_total.labels(
+                model=model,
+                endpoint=endpoint
+            ).inc()
+            
+            try:
+                # Выполняем оригинальную функцию
+                result = await func(*args, **kwargs)
+                
+                # Если есть информация о токенах, записываем ее
+                if hasattr(result, 'usage') and result.usage:
+                    if hasattr(result.usage, 'prompt_tokens'):
+                        openai_api_tokens_total.labels(
+                            model=model,
+                            type='prompt'
+                        ).inc(result.usage.prompt_tokens)
+                    
+                    if hasattr(result.usage, 'completion_tokens'):
+                        openai_api_tokens_total.labels(
+                            model=model,
+                            type='completion'
+                        ).inc(result.usage.completion_tokens)
+                
+                return result
+            finally:
+                # Записываем время выполнения
+                duration = time.time() - start_time
+                openai_api_duration_seconds.labels(
+                    model=model,
+                    endpoint=endpoint
+                ).observe(duration)
+        
+        return wrapper
+    
+    return decorator
 
-    # Add readiness check endpoint
-    @app.get("/ready")
-    async def ready():
-        """Readiness check endpoint."""
-        # In a real application, this would check database connectivity,
-        # external service availability, etc.
-        try:
-            # Perform any necessary checks here
-            return {
-                "status": "ready",
-                "timestamp": datetime.now().isoformat(),
-            }
-        except Exception:
-            return {
-                "status": "not ready",
-                "timestamp": datetime.now().isoformat(),
-            }
+def track_celery_task(task_name: str):
+    """
+    Декоратор для отслеживания выполнения Celery-задач
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            
+            # Инкрементируем счетчик запущенных задач
+            celery_tasks_total.labels(
+                task_name=task_name,
+                status='started'
+            ).inc()
+            
+            try:
+                # Выполняем оригинальную функцию
+                result = func(*args, **kwargs)
+                
+                # Инкрементируем счетчик успешных задач
+                celery_tasks_total.labels(
+                    task_name=task_name,
+                    status='success'
+                ).inc()
+                
+                return result
+            except Exception as e:
+                # Инкрементируем счетчик неудачных задач
+                celery_tasks_total.labels(
+                    task_name=task_name,
+                    status='failure'
+                ).inc()
+                
+                # Пробрасываем исключение дальше
+                raise
+            finally:
+                # Записываем время выполнения
+                duration = time.time() - start_time
+                celery_task_duration_seconds.labels(
+                    task_name=task_name
+                ).observe(duration)
+        
+        return wrapper
+    
+    return decorator
 
-    logger.info("Monitoring setup complete")
+def update_active_tenants(count: int):
+    """
+    Обновляет метрику активных тенантов
+    """
+    active_tenants_gauge.set(count)
+
+def update_active_users(count: int):
+    """
+    Обновляет метрику активных пользователей
+    """
+    active_users_gauge.set(count)

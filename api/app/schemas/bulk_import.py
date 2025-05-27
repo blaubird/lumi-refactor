@@ -1,26 +1,15 @@
-"""Bulk import schemas module."""
-
-from typing import List
-
 from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
 
+class BulkFAQImportItem(BaseModel):
+    question: str = Field(..., description="The question part of the FAQ")
+    answer: str = Field(..., description="The answer part of the FAQ")
 
-class FAQImportItem(BaseModel):
-    """FAQ import item schema."""
+class BulkFAQImportRequest(BaseModel):
+    items: List[BulkFAQImportItem] = Field(..., description="List of FAQ items to import")
 
-    question: str = Field(..., description="Question text")
-    answer: str = Field(..., description="Answer text")
-
-
-class FAQBulkImport(BaseModel):
-    """FAQ bulk import schema."""
-
-    items: List[FAQImportItem] = Field(..., description="List of FAQs to import")
-
-
-class BulkImportResponse(BaseModel):
-    """Bulk import response schema."""
-
-    success_count: int = Field(..., description="Number of successfully imported items")
-    error_count: int = Field(..., description="Number of failed imports")
-    errors: List[str] = Field(..., description="List of error messages")
+class BulkFAQImportResponse(BaseModel):
+    total_items: int = Field(..., description="Total number of items in the request")
+    successful_items: int = Field(..., description="Number of successfully imported items")
+    failed_items: int = Field(..., description="Number of items that failed to import")
+    errors: Optional[List[Dict[str, Any]]] = Field(None, description="List of errors encountered during import")
