@@ -8,11 +8,13 @@ from datetime import datetime
 from typing import Optional, List
 
 # Changed to absolute imports assuming admin.py is in routers/ and other modules are at the same level as routers/
-from models import Tenant, FAQ, Message # Added Message model import
-from deps import get_db
-from schemas import admin as admin_schemas
+from app.models.tenant import Tenant
+from app.models.faq import FAQ
+from app.models.message import Message
+from app.api.deps import get_db
+from app.schemas import admin as admin_schemas
 from schemas.bulk_import import BulkFAQImportRequest, BulkFAQImportResponse
-from ai import generate_embedding # Import for generating embeddings
+from app.services.ai import generate_embedding
 from logging_utils import get_logger
 from tasks import process_bulk_faq_import
 
