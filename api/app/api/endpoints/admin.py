@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from ai import generate_embedding  # Import for generating embeddings
+from app.services.ai import generate_embedding  # Import for generating embeddings
 from deps import get_db
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from logging_utils import get_logger
