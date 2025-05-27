@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 
-from deps import get_db
-from models import Tenant # To fetch tenant specific data like system_prompt
-from ai import get_rag_response, load_embedding_model # Import RAG logic and model loader
+from app.api.deps import get_db
+from app.models.tenant import Tenant
+from app.services.ai import get_rag_response, load_embedding_model
 from schemas.rag import RAGQueryRequest, RAGResponse # Define these schemas
 from logging_utils import get_logger
 
