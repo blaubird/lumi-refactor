@@ -53,8 +53,13 @@ except Exception as e:
 async def startup():
     """Run startup tasks."""
     logger.info("Application startup initiated")
-    # Note: We don't create tables here anymore - that's handled by Alembic migrations
-    # This prevents conflicts between direct SQLAlchemy table creation and migrations
+    try:
+        from scripts.setup_db import setup_database
+        setup_database(create_sample_data=False)
+        logger.info("Database initialization complete")
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        # Не прерываем запуск приложения при ошибке инициализации БД
     logger.info("Application startup complete")
 
 @app.get("/")
