@@ -2,7 +2,6 @@ from fastapi import FastAPI, Depends, HTTPException, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
-
 from app.api.endpoints import webhook
 from app.core.database import get_db
 from app.core.logging import logging as logger
@@ -33,5 +32,7 @@ def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import hypercorn
+    port = int(os.getenv("PORT", "8000"))
+    logger.info(f"Starting Hypercorn server on port {port}")
+    hypercorn.run("main:app", host="0.0.0.0", port=port)
